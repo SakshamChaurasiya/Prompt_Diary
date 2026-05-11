@@ -3,6 +3,16 @@
  *
  * In development, this points to localhost:8000.
  * In production, set NEXT_PUBLIC_API_URL to your deployed backend URL.
+ * 
+ * For authenticated requests, pass the access token from the Auth Context:
+ * 
+ * @example
+ * import { useAuth } from "@/lib/AuthContext";
+ * 
+ * const { session } = useAuth();
+ * const data = await fetchAPI("/protected-endpoint", {
+ *   token: session?.access_token,
+ * });
  */
 
 const API_BASE_URL =

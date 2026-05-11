@@ -58,7 +58,9 @@ export default function DashboardPage() {
 
   // Redirect to login if not authenticated
   if (!user) {
-    router.replace("/login");
+    // Preserve current URL as "next" query parameter
+    const currentPath = "/dashboard";
+    router.replace(`/login?next=${encodeURIComponent(currentPath)}`);
     return null;
   }
 

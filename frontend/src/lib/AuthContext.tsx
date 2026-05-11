@@ -5,20 +5,14 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { User, Session } from "@supabase/supabase-js";
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  isConfigured: boolean;
-  signOut: () => Promise<void>;
+  user: User | null;                    // Current authenticated user
+  session: Session | null;              // Current session with access_token for API requests
+  loading: boolean;                     // Auth initialization state
+  isConfigured: boolean;                // Whether Supabase is configured
+  signOut: () => Promise<void>;         // Sign out current user
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  loading: true,
-  isConfigured: false,
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
