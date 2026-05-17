@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowRight, FileText, Inbox } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,10 @@ function formatDate(dateStr: string) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function ArticlesClient({ articles, categories }: ArticlesClientProps) {
+export default function ArticlesClient({
+  articles,
+  categories,
+}: ArticlesClientProps) {
   const [activeCategory, setActiveCategory] = useState("all");
 
   const filtered =
@@ -51,49 +55,52 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
       <div
         style={{
           display: "flex",
-          gap: "8px",
-          marginBottom: "32px",
+          gap: "10px",
+          marginBottom: "34px",
           flexWrap: "wrap",
+          alignItems: "center",
         }}
       >
         {categories.map((cat) => {
           const isActive = activeCategory === cat;
+
           return (
             <button
               key={cat}
               id={`filter-${cat}`}
               onClick={() => setActiveCategory(cat)}
               style={{
-                padding: "8px 20px",
-                borderRadius: "10px",
+                padding: "9px 20px",
+                borderRadius: "12px",
                 border: isActive
-                  ? "1px solid rgba(124, 58, 237, 0.5)"
+                  ? "1px solid rgba(0, 229, 255, 0.45)"
                   : "1px solid var(--border-medium)",
                 background: isActive
-                  ? "rgba(124, 58, 237, 0.18)"
-                  : "transparent",
-                color: isActive ? "#c4b5fd" : "var(--text-secondary)",
-                fontSize: "0.85rem",
-                fontWeight: isActive ? 600 : 500,
+                  ? "linear-gradient(135deg, rgba(0,229,255,0.16), rgba(124,58,237,0.18))"
+                  : "rgba(255,255,255,0.02)",
+                color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                fontSize: "0.84rem",
+                fontWeight: isActive ? 700 : 500,
                 cursor: "pointer",
                 textTransform: "capitalize",
                 transition: "all 0.2s ease",
                 outline: "none",
+                boxShadow: isActive
+                  ? "0 0 24px rgba(0,229,255,0.08)"
+                  : "none",
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    "rgba(255,255,255,0.05)";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "var(--text-primary)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isActive) {
-                  (e.currentTarget as HTMLButtonElement).style.background =
-                    "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color =
-                    "var(--text-secondary)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                  e.currentTarget.style.borderColor = "var(--border-medium)";
                 }
               }}
             >
@@ -107,8 +114,9 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
           style={{
             marginLeft: "auto",
             color: "var(--text-muted)",
-            fontSize: "0.85rem",
+            fontSize: "0.84rem",
             alignSelf: "center",
+            letterSpacing: "0.02em",
           }}
         >
           {filtered.length} article{filtered.length !== 1 ? "s" : ""}
@@ -125,13 +133,29 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
             color: "var(--text-muted)",
           }}
         >
-          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>📭</div>
+          <div
+            style={{
+              width: "58px",
+              height: "58px",
+              margin: "0 auto 18px",
+              borderRadius: "16px",
+              background:
+                "linear-gradient(135deg, rgba(0,229,255,0.12), rgba(124,58,237,0.14))",
+              border: "1px solid rgba(255,255,255,0.08)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Inbox size={26} strokeWidth={1.8} />
+          </div>
+
           <p style={{ fontSize: "1rem" }}>
             No articles in this category yet. Check back soon!
           </p>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           {filtered.map((article, index) => (
             <Link
               key={article.id}
@@ -145,25 +169,56 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
                 opacity: 0,
                 animationDelay: `${index * 0.08}s`,
                 display: "block",
+                border: "1px solid rgba(255,255,255,0.07)",
+                transition:
+                  "transform 0.2s ease, border-color 0.2s ease, background 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.borderColor = "rgba(0,229,255,0.28)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.045)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)";
+                e.currentTarget.style.background = "";
               }}
             >
-              {/* Top row: badges + arrow */}
+              {/* Top row */}
               <div
                 style={{
                   display: "flex",
-                  alignItems: "start",
+                  alignItems: "flex-start",
                   justifyContent: "space-between",
-                  gap: "16px",
-                  flexWrap: "wrap",
+                  gap: "18px",
                 }}
               >
-                <div style={{ flex: 1 }}>
+                {/* Small icon box */}
+                <div
+                  style={{
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "13px",
+                    background:
+                      "linear-gradient(135deg, rgba(0,229,255,0.12), rgba(124,58,237,0.14))",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginTop: "2px",
+                  }}
+                >
+                  <FileText size={19} strokeWidth={1.8} />
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
                   {/* Difficulty + Category badges */}
                   <div
                     style={{
                       display: "flex",
                       gap: "8px",
-                      marginBottom: "10px",
+                      marginBottom: "11px",
                       flexWrap: "wrap",
                       alignItems: "center",
                     }}
@@ -171,9 +226,10 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
                     <span className={getBadgeClass(article.difficulty)}>
                       {article.difficulty}
                     </span>
+
                     <span
                       style={{
-                        fontSize: "0.75rem",
+                        fontSize: "0.74rem",
                         padding: "4px 12px",
                         borderRadius: "20px",
                         background: "rgba(255,255,255,0.05)",
@@ -183,11 +239,13 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
                     >
                       {article.category}
                     </span>
+
                     <span
                       style={{
                         marginLeft: "auto",
-                        fontSize: "0.75rem",
+                        fontSize: "0.74rem",
                         color: "var(--text-muted)",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {formatDate(article.created_at)}
@@ -197,10 +255,11 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
                   {/* Title */}
                   <h3
                     style={{
-                      fontSize: "1.15rem",
-                      fontWeight: 600,
+                      fontSize: "1.14rem",
+                      fontWeight: 700,
                       marginBottom: "8px",
                       lineHeight: 1.4,
+                      letterSpacing: "-0.01em",
                     }}
                   >
                     {article.title}
@@ -211,50 +270,57 @@ export default function ArticlesClient({ articles, categories }: ArticlesClientP
                     style={{
                       color: "var(--text-secondary)",
                       fontSize: "0.9rem",
-                      lineHeight: 1.6,
+                      lineHeight: 1.65,
                     }}
                   >
                     {article.excerpt}
                   </p>
+
+                  {/* Tags row */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      marginTop: "15px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {article.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          fontSize: "0.7rem",
+                          padding: "3px 10px",
+                          borderRadius: "8px",
+                          background: "rgba(255,255,255,0.04)",
+                          color: "var(--text-muted)",
+                          border: "1px solid rgba(255,255,255,0.04)",
+                        }}
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Arrow */}
                 <span
                   style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    background: "rgba(255,255,255,0.03)",
                     color: "var(--text-muted)",
-                    fontSize: "1.25rem",
                     flexShrink: 0,
                     marginTop: "4px",
-                    transition: "transform 0.2s ease, color 0.2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  →
+                  <ArrowRight size={17} strokeWidth={1.8} />
                 </span>
-              </div>
-
-              {/* Tags row */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  marginTop: "14px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {article.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    style={{
-                      fontSize: "0.7rem",
-                      padding: "2px 10px",
-                      borderRadius: "8px",
-                      background: "rgba(255,255,255,0.04)",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    #{tag}
-                  </span>
-                ))}
               </div>
             </Link>
           ))}

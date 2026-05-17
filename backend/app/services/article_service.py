@@ -1,14 +1,99 @@
 """
 Article service — business logic for article operations.
 
-In Phase 1, this provides mock data.
-In Phase 2+, this will query the database.
+Queries Supabase PostgreSQL for articles data.
+Falls back to mock data if Supabase is not configured.
 """
 
-from uuid import UUID
-from typing import List, Optional
+from typing import Optional
+from app.core.config import settings
 
-# Mock data for Phase 1 development
+# ---------------------------------------------------------------------------
+# Supabase-powered functions
+# ---------------------------------------------------------------------------
+
+
+def _get_supabase():
+    """Get the Supabase client, or None if not configured."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        return None
+    try:
+        from app.core.supabase_client import get_supabase_admin
+        return get_supabase_admin()
+    except Exception:
+        return None
+
+
+def get_all_articles(category: Optional[str] = None, difficulty: Optional[str] = None) -> dict:
+    """Get all published articles, optionally filtered."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            query = supabase.table("articles").select("*").eq("published", True)
+            if category:
+                query = query.eq("category", category)
+            if difficulty:
+                query = query.eq("difficulty", difficulty)
+            query = query.order("created_at", desc=True)
+            result = query.execute()
+            return {
+                "articles": result.data or [],
+                "total": len(result.data or []),
+            }
+        except Exception as e:
+            print(f"[ArticleService] Supabase query failed, using mock: {e}")
+
+    # Fallback to mock data
+    articles = MOCK_ARTICLES.copy()
+    if category:
+        articles = [a for a in articles if a["category"] == category]
+    if difficulty:
+        articles = [a for a in articles if a["difficulty"] == difficulty]
+    return {
+        "articles": articles,
+        "total": len(articles),
+    }
+
+
+def get_article_by_id(article_id: str) -> Optional[dict]:
+    """Get a single article by ID."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            result = supabase.table("articles").select("*").eq("id", article_id).single().execute()
+            return result.data
+        except Exception:
+            pass
+
+    for article in MOCK_ARTICLES:
+        if article["id"] == article_id:
+            return article
+    return None
+
+
+def get_article_by_slug(slug: str) -> Optional[dict]:
+    """Get a single article by slug."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            result = supabase.table("articles").select("*").eq("slug", slug).single().execute()
+            return result.data
+        except Exception:
+            pass
+
+    for article in MOCK_ARTICLES:
+        if article["slug"] == slug:
+            return article
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Mock data (fallback when Supabase tables don't exist yet)
+# ---------------------------------------------------------------------------
+
 MOCK_ARTICLES = [
     {
         "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -261,34 +346,3 @@ The agent evaluates its own outputs and decides whether to iterate or conclude.
         "updated_at": "2025-03-01T00:00:00Z",
     },
 ]
-
-
-def get_all_articles(category: Optional[str] = None, difficulty: Optional[str] = None) -> dict:
-    """Get all published articles, optionally filtered."""
-    articles = MOCK_ARTICLES.copy()
-
-    if category:
-        articles = [a for a in articles if a["category"] == category]
-    if difficulty:
-        articles = [a for a in articles if a["difficulty"] == difficulty]
-
-    return {
-        "articles": articles,
-        "total": len(articles),
-    }
-
-
-def get_article_by_id(article_id: str) -> Optional[dict]:
-    """Get a single article by ID."""
-    for article in MOCK_ARTICLES:
-        if article["id"] == article_id:
-            return article
-    return None
-
-
-def get_article_by_slug(slug: str) -> Optional[dict]:
-    """Get a single article by slug."""
-    for article in MOCK_ARTICLES:
-        if article["slug"] == slug:
-            return article
-    return None

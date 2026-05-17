@@ -1,9 +1,10 @@
 """
 Articles API endpoints.
 
-GET /articles          — List all articles (with optional filters)
-GET /articles/{id}     — Get a single article by ID
-GET /articles/slug/{slug} — Get a single article by slug
+GET /articles             — List all articles (with optional filters)
+GET /articles/system-design — List architecture articles
+GET /articles/slug/{slug} — Get a single article by URL slug (MUST be before /{article_id})
+GET /articles/{id}        — Get a single article by ID
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -36,6 +37,17 @@ async def list_system_design_articles():
     return get_all_articles(category="architecture")
 
 
+# IMPORTANT: This route MUST be registered before /{article_id} so FastAPI
+# doesn't interpret "slug" as an article ID.
+@router.get("/slug/{slug}")
+async def get_article_by_slug_endpoint(slug: str):
+    """Get a single article by its URL slug."""
+    article = get_article_by_slug(slug)
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    return article
+
+
 @router.get("/{article_id}")
 async def get_article(article_id: str):
     """Get a single article by its ID."""
@@ -44,11 +56,3 @@ async def get_article(article_id: str):
         raise HTTPException(status_code=404, detail="Article not found")
     return article
 
-
-@router.get("/slug/{slug}")
-async def get_article_by_slug_endpoint(slug: str):
-    """Get a single article by its URL slug."""
-    article = get_article_by_slug(slug)
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    return article

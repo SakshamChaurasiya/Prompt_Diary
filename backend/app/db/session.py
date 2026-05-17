@@ -2,35 +2,65 @@
 Database session management.
 
 Provides async database engine and session for PostgreSQL via asyncpg.
-In development mode (no DATABASE_URL), the app runs without a database
-using mock data from the API endpoints.
+Connects to Supabase's PostgreSQL database using DATABASE_URL.
 """
 
-from typing import Optional
+from typing import AsyncGenerator, Optional
 from app.core.config import settings
 
-# Database engine and session will be initialized when Supabase is configured
-engine = None
-async_session = None
+# Will be lazily initialized
+_engine = None
+_async_session = None
 
 
-async def get_db():
+def _init_engine():
+    """Initialize the database engine and session factory lazily."""
+    global _engine, _async_session
+
+    if _engine is not None:
+        return
+
+    if not settings.DATABASE_URL:
+        return
+
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    _engine = create_async_engine(
+        settings.DATABASE_URL,
+        echo=(settings.APP_ENV == "development"),
+        pool_size=5,
+        max_overflow=10,
+        pool_pre_ping=True,
+    )
+    _async_session = async_sessionmaker(
+        _engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+
+async def get_db() -> AsyncGenerator:
     """
-    Dependency that provides a database session.
+    Dependency that provides an async database session.
 
-    In Phase 1, this returns None since we use mock data.
-    In Phase 2+, this will provide an async SQLModel session.
+    Usage:
+        @router.get("/items")
+        async def get_items(db: AsyncSession = Depends(get_db)):
+            ...
     """
     if not settings.DATABASE_URL:
         yield None
         return
 
-    # When database is configured, uncomment and use:
-    # from sqlmodel.ext.asyncio.session import AsyncSession
-    # from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-    #
-    # engine = create_async_engine(settings.DATABASE_URL, echo=True)
-    # async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    # async with async_session() as session:
-    #     yield session
-    yield None
+    _init_engine()
+
+    if _async_session is None:
+        yield None
+        return
+
+    async with _async_session() as session:
+        try:
+            yield session
+        finally:
+            await session.close()

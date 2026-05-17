@@ -1,198 +1,113 @@
 """
 Authentication API endpoints.
 
-POST /auth/signup    — Register a new user
-POST /auth/login     — Login and get access token
-GET  /auth/me        — Get current user info (protected endpoint example)
+With Supabase Auth, the frontend handles signup/login directly via the
+Supabase JS client. The backend's role is to:
+  1. Verify the JWT token that Supabase issues
+  2. Return the authenticated user's profile
+  3. Provide a profile update endpoint
+
+POST /auth/signup    — No longer needed (Supabase handles this on frontend)
+POST /auth/login     — No longer needed (Supabase handles this on frontend)
+GET  /auth/me        — Get current user's profile (requires JWT)
+PUT  /auth/profile   — Update current user's profile (requires JWT)
 """
 
-from fastapi import APIRouter, HTTPException, Depends
-from supabase import create_client, Client
-from app.schemas.user import UserSignup, UserLogin, MessageResponse
-from app.core.security import get_current_user
-from app.core.config import settings
+from fastapi import APIRouter, Depends, HTTPException
+from app.core.security import get_current_user, get_optional_user
+from app.core.supabase_client import get_supabase_admin
+from app.schemas.user import UserResponse, MessageResponse
+
+from typing import Optional
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-def get_supabase_client() -> Client:
-    """
-    Create and return a Supabase client instance.
-    
-    Returns:
-        Supabase client configured with URL and service role key
-        
-    Raises:
-        HTTPException(500): If Supabase is not properly configured
-    """
-    if not settings.is_supabase_configured():
-        raise HTTPException(
-            status_code=500,
-            detail="Supabase is not properly configured. Please contact the administrator."
-        )
-    
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+class ProfileUpdate(BaseModel):
+    """Schema for updating user profile fields."""
+    username: Optional[str] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
-@router.post("/signup", response_model=MessageResponse)
-async def signup(user_data: UserSignup):
+@router.get("/me", response_model=dict)
+async def get_me(user: dict = Depends(get_current_user)):
     """
-    Register a new user account.
+    Get the current authenticated user's profile.
 
-    Creates a new user in Supabase Auth with the provided email and password.
-    Optionally stores username in user metadata.
-    
-    Args:
-        user_data: User signup information (email, password, optional username)
-        
-    Returns:
-        Success message with user email
-        
-    Raises:
-        HTTPException(400): If user already exists or validation fails
-        HTTPException(500): If Supabase is not configured or signup fails
+    Requires a valid Supabase JWT in the Authorization header.
+    Returns the user's profile from the profiles table.
     """
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token — no user ID")
+
     try:
-        supabase = get_supabase_client()
-        
-        # Prepare user metadata
-        user_metadata = {}
-        if user_data.username:
-            user_metadata["username"] = user_data.username
-        if user_data.display_name:
-            user_metadata["display_name"] = user_data.display_name
-        
-        # Create user in Supabase Auth
-        response = supabase.auth.sign_up({
-            "email": user_data.email,
-            "password": user_data.password,
-            "options": {
-                "data": user_metadata
-            } if user_metadata else {}
-        })
-        
-        # Check if signup was successful
-        if response.user:
-            return MessageResponse(
-                message=f"Account created successfully for {user_data.email}. Please check your email to confirm your account.",
-                success=True
-            )
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to create user account. Please try again."
-            )
-            
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        # Handle Supabase-specific errors
-        error_message = str(e)
-        
-        # Check for common error patterns
-        if "already registered" in error_message.lower() or "already exists" in error_message.lower():
-            raise HTTPException(
-                status_code=400,
-                detail="An account with this email already exists."
-            )
-        elif "password" in error_message.lower():
-            raise HTTPException(
-                status_code=400,
-                detail="Password does not meet requirements. Please use at least 6 characters."
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to create user account: {error_message}"
-            )
+        supabase = get_supabase_admin()
+        result = supabase.table("profiles").select("*").eq("id", user_id).single().execute()
+
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "email": user.get("email"),
+                "role": user.get("role", "authenticated"),
+                "profile": result.data if result.data else None,
+            },
+        }
+    except Exception:
+        # Profile might not exist yet (race condition with trigger)
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "email": user.get("email"),
+                "role": user.get("role", "authenticated"),
+                "profile": None,
+            },
+        }
 
 
-@router.post("/login")
-async def login(user_data: UserLogin):
+@router.put("/profile", response_model=MessageResponse)
+async def update_profile(
+    profile_data: ProfileUpdate,
+    user: dict = Depends(get_current_user),
+):
     """
-    Login with email and password.
+    Update the current user's profile.
 
-    Authenticates user credentials via Supabase Auth and returns a JWT token
-    on successful authentication.
-    
-    Args:
-        user_data: User login credentials (email and password)
-        
-    Returns:
-        JWT access token and user information
-        
-    Raises:
-        HTTPException(400): If credentials are invalid
-        HTTPException(500): If Supabase is not configured or login fails
+    Only updates fields that are provided (non-null).
     """
+    user_id = user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token — no user ID")
+
+    # Build update dict with only provided fields
+    update_data = {k: v for k, v in profile_data.model_dump().items() if v is not None}
+
+    if not update_data:
+        return MessageResponse(message="No fields to update", success=True)
+
     try:
-        supabase = get_supabase_client()
-        
-        # Authenticate with Supabase
-        response = supabase.auth.sign_in_with_password({
-            "email": user_data.email,
-            "password": user_data.password
-        })
-        
-        # Check if login was successful
-        if response.session and response.session.access_token:
-            return {
-                "access_token": response.session.access_token,
-                "token_type": "bearer",
-                "user": {
-                    "id": response.user.id,
-                    "email": response.user.email,
-                    "user_metadata": response.user.user_metadata
-                }
-            }
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid credentials. Please check your email and password."
-            )
-            
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
+        supabase = get_supabase_admin()
+        supabase.table("profiles").update(update_data).eq("id", user_id).execute()
+        return MessageResponse(message="Profile updated successfully", success=True)
     except Exception as e:
-        # Handle Supabase-specific errors
-        error_message = str(e)
-        
-        # Check for common error patterns
-        if "invalid" in error_message.lower() or "credentials" in error_message.lower() or "password" in error_message.lower():
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid credentials. Please check your email and password."
-            )
-        elif "not found" in error_message.lower() or "user" in error_message.lower():
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid credentials. Please check your email and password."
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to authenticate: {error_message}"
-            )
+        raise HTTPException(status_code=500, detail=f"Failed to update profile: {str(e)}")
 
 
-@router.get("/me")
-async def get_current_user_info(user_id: str = Depends(get_current_user)):
+@router.get("/status")
+async def auth_status(user: Optional[dict] = Depends(get_optional_user)):
     """
-    Get current authenticated user information.
-    
-    This is a protected endpoint that demonstrates the use of the get_current_user
-    dependency. It requires a valid JWT token in the Authorization header.
-    
-    Returns:
-        User ID and a success message
-        
-    Raises:
-        HTTPException(401): If the token is missing or invalid
+    Check authentication status.
+    Works for both authenticated and unauthenticated requests.
     """
-    return {
-        "user_id": user_id,
-        "message": "Successfully authenticated",
-        "authenticated": True
-    }
+    if user:
+        return {
+            "authenticated": True,
+            "user_id": user.get("sub"),
+            "email": user.get("email"),
+        }
+    return {"authenticated": False}

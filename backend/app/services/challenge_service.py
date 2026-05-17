@@ -1,10 +1,77 @@
 """
 Challenge service — business logic for challenge operations.
 
-In Phase 1, this provides mock data.
+Queries Supabase PostgreSQL for challenges data.
+Falls back to mock data if Supabase is not configured.
 """
 
 from typing import Optional
+from app.core.config import settings
+
+
+def _get_supabase():
+    """Get the Supabase client, or None if not configured."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        return None
+    try:
+        from app.core.supabase_client import get_supabase_admin
+        return get_supabase_admin()
+    except Exception:
+        return None
+
+
+def get_all_challenges(difficulty: Optional[str] = None, category: Optional[str] = None) -> dict:
+    """Get all challenges, optionally filtered."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            query = supabase.table("challenges").select("*")
+            if difficulty:
+                query = query.eq("difficulty", difficulty)
+            if category:
+                query = query.eq("category", category)
+            query = query.order("created_at", desc=True)
+            result = query.execute()
+            return {
+                "challenges": result.data or [],
+                "total": len(result.data or []),
+            }
+        except Exception as e:
+            print(f"[ChallengeService] Supabase query failed, using mock: {e}")
+
+    # Fallback to mock data
+    challenges = MOCK_CHALLENGES.copy()
+    if difficulty:
+        challenges = [c for c in challenges if c["difficulty"] == difficulty]
+    if category:
+        challenges = [c for c in challenges if c["category"] == category]
+    return {
+        "challenges": challenges,
+        "total": len(challenges),
+    }
+
+
+def get_challenge_by_id(challenge_id: str) -> Optional[dict]:
+    """Get a single challenge by ID."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            result = supabase.table("challenges").select("*").eq("id", challenge_id).single().execute()
+            return result.data
+        except Exception:
+            pass
+
+    for challenge in MOCK_CHALLENGES:
+        if challenge["id"] == challenge_id:
+            return challenge
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Mock data (fallback when Supabase tables don't exist yet)
+# ---------------------------------------------------------------------------
 
 MOCK_CHALLENGES = [
     {
@@ -83,26 +150,3 @@ MOCK_CHALLENGES = [
         "created_at": "2025-03-01T00:00:00Z",
     },
 ]
-
-
-def get_all_challenges(difficulty: Optional[str] = None, category: Optional[str] = None) -> dict:
-    """Get all challenges, optionally filtered."""
-    challenges = MOCK_CHALLENGES.copy()
-
-    if difficulty:
-        challenges = [c for c in challenges if c["difficulty"] == difficulty]
-    if category:
-        challenges = [c for c in challenges if c["category"] == category]
-
-    return {
-        "challenges": challenges,
-        "total": len(challenges),
-    }
-
-
-def get_challenge_by_id(challenge_id: str) -> Optional[dict]:
-    """Get a single challenge by ID."""
-    for challenge in MOCK_CHALLENGES:
-        if challenge["id"] == challenge_id:
-            return challenge
-    return None

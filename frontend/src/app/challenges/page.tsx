@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-// Challenges list — "Start Challenge" now links to /challenges/[id]
+import { ArrowRight, CheckCircle2, Layers3, Trophy } from "lucide-react";
+import { serverListChallenges, type ApiChallenge } from "@/lib/server-api";
 
 export const metadata: Metadata = {
-  title: "Challenges — Prompt Dairy",
+  title: "Challenges — Prompt Diary",
   description:
     "Practice writing effective prompts with hands-on challenges. From summarization to multi-step reasoning.",
 };
 
-const challenges = [
+const FALLBACK: ApiChallenge[] = [
   {
     id: "ch-001",
     title: "Summarize an Article",
@@ -17,6 +18,9 @@ const challenges = [
     difficulty: "easy",
     category: "summarization",
     points: 10,
+    starter_prompt: "Summarize the following article...",
+    hints: [],
+    created_at: "",
   },
   {
     id: "ch-002",
@@ -26,6 +30,9 @@ const challenges = [
     difficulty: "medium",
     category: "extraction",
     points: 20,
+    starter_prompt: "Extract the following information...",
+    hints: [],
+    created_at: "",
   },
   {
     id: "ch-003",
@@ -35,6 +42,9 @@ const challenges = [
     difficulty: "medium",
     category: "reasoning",
     points: 20,
+    starter_prompt: "Solve the following problem step by step...",
+    hints: [],
+    created_at: "",
   },
   {
     id: "ch-004",
@@ -44,82 +54,132 @@ const challenges = [
     difficulty: "hard",
     category: "role-playing",
     points: 30,
+    starter_prompt: "You are a senior software engineer...",
+    hints: [],
+    created_at: "",
   },
   {
     id: "ch-005",
     title: "Build a Prompt Chain",
     description:
-      "Design 3 connected prompts: analyze → generate solutions → evaluate and rank.",
+      "Design 3 connected prompts: analyze, generate solutions, then evaluate and rank.",
     difficulty: "hard",
     category: "chaining",
     points: 40,
+    starter_prompt: "Step 1: Analyze the following...",
+    hints: [],
+    created_at: "",
   },
 ];
 
-export default function ChallengesPage() {
+export default async function ChallengesPage() {
+  const api = await serverListChallenges();
+  const challenges =
+    api?.challenges?.length && api.challenges.every((c) => c.id && c.title)
+      ? api.challenges
+      : FALLBACK;
+
+  const totalPoints = challenges.reduce((sum, challenge) => {
+    return sum + (challenge.points || 0);
+  }, 0);
+  const difficulties = new Set(challenges.map((challenge) => challenge.difficulty)).size;
+  const stats = [
+    { label: "Total Challenges", value: String(challenges.length), icon: Layers3 },
+    { label: "Total Points", value: String(totalPoints), icon: Trophy },
+    { label: "Difficulties", value: String(difficulties), icon: CheckCircle2 },
+  ];
+
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "48px 24px" }}>
-      <div style={{ marginBottom: "48px" }}>
+      <div style={{ marginBottom: "46px" }}>
         <h1
           style={{
             fontSize: "clamp(2rem, 4vw, 2.75rem)",
             fontWeight: 800,
             marginBottom: "12px",
+            letterSpacing: "-0.03em",
           }}
         >
-          🎯 Prompt Challenges
+          Prompt Challenges
         </h1>
+
         <p
           style={{
             color: "var(--text-secondary)",
             fontSize: "1.05rem",
-            maxWidth: "600px",
+            maxWidth: "640px",
+            lineHeight: 1.7,
           }}
         >
-          Practice writing effective prompts. Earn points and track your
-          progress.
+          Practice writing effective prompts. Earn points and track your progress.
         </p>
       </div>
 
-      {/* Stats bar */}
       <div
         className="glass-card"
         style={{
-          display: "flex",
-          justifyContent: "space-around",
-          padding: "24px",
-          marginBottom: "32px",
-          textAlign: "center",
-          flexWrap: "wrap",
-          gap: "16px",
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          padding: "22px",
+          marginBottom: "34px",
+          gap: "14px",
         }}
       >
-        {[
-          { label: "Total Challenges", value: "5" },
-          { label: "Total Points", value: "120" },
-          { label: "Difficulties", value: "3" },
-        ].map((stat) => (
-          <div key={stat.label}>
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+
+          return (
             <div
-              style={{ fontSize: "1.5rem", fontWeight: 700 }}
-              className="gradient-text"
+              key={stat.label}
+              style={{
+                padding: "18px 16px",
+                borderRadius: "16px",
+                background: "rgba(255,255,255,0.025)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+              }}
             >
-              {stat.value}
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "13px",
+                  background:
+                    "linear-gradient(135deg, rgba(0,229,255,0.12), rgba(124,58,237,0.14))",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon size={20} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <div
+                  style={{ fontSize: "1.45rem", fontWeight: 800 }}
+                  className="gradient-text"
+                >
+                  {stat.value}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  {stat.label}
+                </div>
+              </div>
             </div>
-            <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-              {stat.label}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Challenge Cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
         {challenges.map((challenge, index) => (
           <div
             key={challenge.id}
             id={`challenge-${challenge.id}`}
-            className="glass-card animate-fade-in-up"
+            className="glass-card challenge-card animate-fade-in-up"
             style={{
               padding: "28px 32px",
               opacity: 0,
@@ -129,10 +189,9 @@ export default function ChallengesPage() {
             <div
               style={{
                 display: "flex",
-                alignItems: "start",
+                alignItems: "flex-start",
                 justifyContent: "space-between",
-                gap: "16px",
-                flexWrap: "wrap",
+                gap: "18px",
               }}
             >
               <div style={{ flex: 1 }}>
@@ -148,6 +207,7 @@ export default function ChallengesPage() {
                   <span className={`badge badge-${challenge.difficulty}`}>
                     {challenge.difficulty}
                   </span>
+
                   <span
                     style={{
                       fontSize: "0.75rem",
@@ -161,29 +221,37 @@ export default function ChallengesPage() {
                     {challenge.category}
                   </span>
                 </div>
+
                 <h3
                   style={{
                     fontSize: "1.15rem",
-                    fontWeight: 600,
+                    fontWeight: 700,
                     marginBottom: "8px",
+                    letterSpacing: "-0.01em",
                   }}
                 >
                   {challenge.title}
                 </h3>
+
                 <p
                   style={{
                     color: "var(--text-secondary)",
                     fontSize: "0.9rem",
-                    lineHeight: 1.6,
+                    lineHeight: 1.65,
+                    maxWidth: "680px",
                   }}
                 >
                   {challenge.description}
                 </p>
               </div>
 
-              {/* Points */}
               <div
                 style={{
+                  minWidth: "82px",
+                  padding: "12px 14px",
+                  borderRadius: "16px",
+                  background: "rgba(255,255,255,0.035)",
+                  border: "1px solid rgba(255,255,255,0.07)",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -193,8 +261,9 @@ export default function ChallengesPage() {
               >
                 <div
                   style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
+                    fontSize: "1.45rem",
+                    fontWeight: 800,
+                    lineHeight: 1,
                   }}
                   className="gradient-text"
                 >
@@ -202,9 +271,10 @@ export default function ChallengesPage() {
                 </div>
                 <div
                   style={{
-                    fontSize: "0.7rem",
+                    fontSize: "0.68rem",
                     color: "var(--text-muted)",
-                    fontWeight: 500,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
                   }}
                 >
                   POINTS
@@ -212,19 +282,22 @@ export default function ChallengesPage() {
               </div>
             </div>
 
-            <div style={{ marginTop: "16px" }}>
+            <div style={{ marginTop: "18px" }}>
               <Link
                 href={`/challenges/${challenge.id}`}
-                className="btn-secondary"
+                className="btn-secondary challenge-action"
                 style={{
-                  padding: "8px 20px",
+                  padding: "8px 18px",
                   fontSize: "0.85rem",
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "8px",
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
-                Start Challenge →
+                Start Challenge
+                <ArrowRight size={15} strokeWidth={1.8} />
               </Link>
             </div>
           </div>

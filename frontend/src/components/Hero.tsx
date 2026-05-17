@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
+import { FlaskConical, Volume2, VolumeX } from "lucide-react";
 
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -131,21 +132,59 @@ export default function Hero() {
 
       {/* HUD corner brackets */}
       {[
-        { top: "24px", left: "24px", borderTopWidth: "2px", borderTopStyle: "solid" as const, borderTopColor: "rgba(0,229,255,0.3)", borderLeftWidth: "2px", borderLeftStyle: "solid" as const, borderLeftColor: "rgba(0,229,255,0.3)" },
-        { top: "24px", right: "24px", borderTopWidth: "2px", borderTopStyle: "solid" as const, borderTopColor: "rgba(0,229,255,0.3)", borderRightWidth: "2px", borderRightStyle: "solid" as const, borderRightColor: "rgba(0,229,255,0.3)" },
-        { bottom: "24px", left: "24px", borderBottomWidth: "2px", borderBottomStyle: "solid" as const, borderBottomColor: "rgba(0,229,255,0.3)", borderLeftWidth: "2px", borderLeftStyle: "solid" as const, borderLeftColor: "rgba(0,229,255,0.3)" },
-        { bottom: "24px", right: "24px", borderBottomWidth: "2px", borderBottomStyle: "solid" as const, borderBottomColor: "rgba(0,229,255,0.3)", borderRightWidth: "2px", borderRightStyle: "solid" as const, borderRightColor: "rgba(0,229,255,0.3)" },
+        {
+          top: "24px",
+          left: "24px",
+          borderTopWidth: "2px",
+          borderTopStyle: "solid" as const,
+          borderTopColor: "rgba(0,229,255,0.3)",
+          borderLeftWidth: "2px",
+          borderLeftStyle: "solid" as const,
+          borderLeftColor: "rgba(0,229,255,0.3)",
+        },
+        {
+          top: "24px",
+          right: "24px",
+          borderTopWidth: "2px",
+          borderTopStyle: "solid" as const,
+          borderTopColor: "rgba(0,229,255,0.3)",
+          borderRightWidth: "2px",
+          borderRightStyle: "solid" as const,
+          borderRightColor: "rgba(0,229,255,0.3)",
+        },
+        {
+          bottom: "24px",
+          left: "24px",
+          borderBottomWidth: "2px",
+          borderBottomStyle: "solid" as const,
+          borderBottomColor: "rgba(0,229,255,0.3)",
+          borderLeftWidth: "2px",
+          borderLeftStyle: "solid" as const,
+          borderLeftColor: "rgba(0,229,255,0.3)",
+        },
+        {
+          bottom: "24px",
+          right: "24px",
+          borderBottomWidth: "2px",
+          borderBottomStyle: "solid" as const,
+          borderBottomColor: "rgba(0,229,255,0.3)",
+          borderRightWidth: "2px",
+          borderRightStyle: "solid" as const,
+          borderRightColor: "rgba(0,229,255,0.3)",
+        },
       ].map((pos, i) => (
         <div
           key={i}
-          style={{
-            position: "absolute",
-            width: "36px",
-            height: "36px",
-            zIndex: 3,
-            pointerEvents: "none",
-            ...pos,
-          } as React.CSSProperties}
+          style={
+            {
+              position: "absolute",
+              width: "36px",
+              height: "36px",
+              zIndex: 3,
+              pointerEvents: "none",
+              ...pos,
+            } as React.CSSProperties
+          }
         />
       ))}
 
@@ -252,7 +291,16 @@ export default function Hero() {
               backdropFilter: "blur(10px)",
             }}
           >
-            🧪 Try Playground
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <FlaskConical size={18} strokeWidth={2} />
+              Try Playground
+            </span>
           </Link>
         </div>
 
@@ -320,7 +368,6 @@ export default function Hero() {
           alignItems: "center",
           justifyContent: "center",
           cursor: "pointer",
-          fontSize: "18px",
           color: isMuted ? "var(--text-muted)" : "#00e5ff",
           transition: "all 0.3s ease",
           boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
@@ -338,7 +385,11 @@ export default function Hero() {
         }}
         aria-label={isMuted ? "Unmute video" : "Mute video"}
       >
-        {isMuted ? "🔇" : "🔊"}
+        {isMuted ? (
+          <VolumeX size={20} strokeWidth={2} />
+        ) : (
+          <Volume2 size={20} strokeWidth={2} />
+        )}
       </button>
 
       {/* Scroll indicator */}

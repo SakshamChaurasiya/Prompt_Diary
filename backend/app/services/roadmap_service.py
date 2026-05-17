@@ -1,10 +1,73 @@
 """
 Roadmap service — business logic for learning roadmaps.
 
-In Phase 1, this provides mock data.
+Queries Supabase PostgreSQL for roadmaps data.
+Falls back to mock data if Supabase is not configured.
 """
 
 from typing import Optional
+from app.core.config import settings
+
+
+def _get_supabase():
+    """Get the Supabase client, or None if not configured."""
+    if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        return None
+    try:
+        from app.core.supabase_client import get_supabase_admin
+        return get_supabase_admin()
+    except Exception:
+        return None
+
+
+def get_all_roadmaps(level: Optional[str] = None) -> dict:
+    """Get all roadmaps, optionally filtered by level."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            query = supabase.table("roadmaps").select("*")
+            if level:
+                query = query.eq("level", level)
+            query = query.order("created_at", desc=True)
+            result = query.execute()
+            return {
+                "roadmaps": result.data or [],
+                "total": len(result.data or []),
+            }
+        except Exception as e:
+            print(f"[RoadmapService] Supabase query failed, using mock: {e}")
+
+    # Fallback to mock data
+    roadmaps = MOCK_ROADMAPS.copy()
+    if level:
+        roadmaps = [r for r in roadmaps if r["level"] == level]
+    return {
+        "roadmaps": roadmaps,
+        "total": len(roadmaps),
+    }
+
+
+def get_roadmap_by_id(roadmap_id: str) -> Optional[dict]:
+    """Get a single roadmap by ID."""
+    supabase = _get_supabase()
+
+    if supabase:
+        try:
+            result = supabase.table("roadmaps").select("*").eq("id", roadmap_id).single().execute()
+            return result.data
+        except Exception:
+            pass
+
+    for roadmap in MOCK_ROADMAPS:
+        if roadmap["id"] == roadmap_id:
+            return roadmap
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Mock data (fallback when Supabase tables don't exist yet)
+# ---------------------------------------------------------------------------
 
 MOCK_ROADMAPS = [
     {
@@ -56,24 +119,3 @@ MOCK_ROADMAPS = [
         "created_at": "2025-02-01T00:00:00Z",
     },
 ]
-
-
-def get_all_roadmaps(level: Optional[str] = None) -> dict:
-    """Get all roadmaps, optionally filtered by level."""
-    roadmaps = MOCK_ROADMAPS.copy()
-
-    if level:
-        roadmaps = [r for r in roadmaps if r["level"] == level]
-
-    return {
-        "roadmaps": roadmaps,
-        "total": len(roadmaps),
-    }
-
-
-def get_roadmap_by_id(roadmap_id: str) -> Optional[dict]:
-    """Get a single roadmap by ID."""
-    for roadmap in MOCK_ROADMAPS:
-        if roadmap["id"] == roadmap_id:
-            return roadmap
-    return None

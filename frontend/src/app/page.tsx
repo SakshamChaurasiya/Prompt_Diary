@@ -2,8 +2,85 @@ import Hero from "@/components/Hero";
 import FeatureCard from "@/components/FeatureCard";
 import ModuleCard from "@/components/ModuleCard";
 import Link from "next/link";
+import {
+  Puzzle,
+  Zap,
+  GitBranch,
+  Network,
+  Bot,
+  Repeat2,
+  Theater,
+  TableProperties,
+  Search,
+  ShieldCheck,
+  TrendingUp,
+  Globe2,
+} from "lucide-react";
 
 export default function Home() {
+  const topics = [
+    {
+      Icon: Puzzle,
+      topic: "Prompt Engineering",
+      tag: "fundamentals",
+    },
+    {
+      Icon: Zap,
+      topic: "Zero/Few-Shot",
+      tag: "techniques",
+    },
+    {
+      Icon: GitBranch,
+      topic: "Chain-of-Thought",
+      tag: "techniques",
+    },
+    {
+      Icon: Network,
+      topic: "RAG Architecture",
+      tag: "architecture",
+    },
+    {
+      Icon: Bot,
+      topic: "AI Agents",
+      tag: "architecture",
+    },
+    {
+      Icon: Repeat2,
+      topic: "Prompt Chaining",
+      tag: "techniques",
+    },
+    {
+      Icon: Theater,
+      topic: "Role Prompting",
+      tag: "techniques",
+    },
+    {
+      Icon: TableProperties,
+      topic: "Output Formatting",
+      tag: "techniques",
+    },
+    {
+      Icon: Search,
+      topic: "Vector Search",
+      tag: "architecture",
+    },
+    {
+      Icon: ShieldCheck,
+      topic: "AI Safety",
+      tag: "architecture",
+    },
+    {
+      Icon: TrendingUp,
+      topic: "Evaluation",
+      tag: "techniques",
+    },
+    {
+      Icon: Globe2,
+      topic: "Enterprise AI",
+      tag: "architecture",
+    },
+  ];
+
   return (
     <>
       {/* Hero Section — with full-screen video background */}
@@ -185,53 +262,62 @@ export default function Home() {
             gap: "16px",
           }}
         >
-          {[
-            { emoji: "🧩", topic: "Prompt Engineering", tag: "fundamentals" },
-            { emoji: "⚡", topic: "Zero/Few-Shot", tag: "techniques" },
-            { emoji: "🔗", topic: "Chain-of-Thought", tag: "techniques" },
-            { emoji: "🏗️", topic: "RAG Architecture", tag: "architecture" },
-            { emoji: "🤖", topic: "AI Agents", tag: "architecture" },
-            { emoji: "🔄", topic: "Prompt Chaining", tag: "techniques" },
-            { emoji: "🎭", topic: "Role Prompting", tag: "techniques" },
-            { emoji: "📊", topic: "Output Formatting", tag: "techniques" },
-            { emoji: "🔍", topic: "Vector Search", tag: "architecture" },
-            { emoji: "🛡️", topic: "AI Safety", tag: "architecture" },
-            { emoji: "📈", topic: "Evaluation", tag: "techniques" },
-            { emoji: "🌐", topic: "Enterprise AI", tag: "architecture" },
-          ].map((item) => (
-            <div
-              key={item.topic}
-              className="glass-card"
-              style={{
-                padding: "20px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}
-            >
-              <span style={{ fontSize: "24px" }}>{item.emoji}</span>
-              <div>
+          {topics.map((item) => {
+            const Icon = item.Icon;
+
+            return (
+              <div
+                key={item.topic}
+                className="glass-card"
+                style={{
+                  padding: "20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
                 <div
                   style={{
-                    fontWeight: 600,
-                    fontSize: "0.9rem",
-                    marginBottom: "2px",
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background:
+                      "linear-gradient(135deg, rgba(0,229,255,0.14), rgba(176,38,255,0.14))",
+                    border: "1px solid rgba(0,229,255,0.2)",
+                    color: "#7be9ff",
+                    flexShrink: 0,
                   }}
+                  aria-hidden="true"
                 >
-                  {item.topic}
+                  <Icon size={21} strokeWidth={2.1} />
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text-muted)",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {item.tag}
+
+                <div>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.9rem",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {item.topic}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--text-muted)",
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {item.tag}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -261,8 +347,7 @@ export default function Home() {
               marginBottom: "16px",
             }}
           >
-            Ready to{" "}
-            <span className="gradient-text">Level Up</span>?
+            Ready to <span className="gradient-text">Level Up</span>?
           </h2>
           <p
             style={{
@@ -273,10 +358,17 @@ export default function Home() {
               margin: "0 auto 32px",
             }}
           >
-            Join the community and start mastering prompt engineering today. 
+            Join the community and start mastering prompt engineering today.
             It&apos;s completely free.
           </p>
-          <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <Link
               href="/signup"
               id="cta-get-started"

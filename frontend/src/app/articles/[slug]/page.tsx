@@ -1,10 +1,20 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Clock3,
+  FileText,
+  Home,
+  Tag,
+} from "lucide-react";
 import ArticleReadingProgress from "@/components/ArticleReadingProgress";
+import { serverGetArticleBySlug, serverListArticles } from "@/lib/server-api";
 
-// ─── Static Data (Phase 1) ────────────────────────────────────────────────────
+// ─── Offline fallback (when API is down) ─────────────────────────────────────
 
-const articles: Record<string, {
+const FALLBACK_BY_SLUG: Record<string, {
   title: string;
   category: string;
   difficulty: string;
@@ -211,11 +221,11 @@ The agent breaks down complex tasks into actionable steps using techniques like 
 
 ### 2. Tool Use
 Agents extend LLM capabilities by calling external tools:
-- 🔍 Web search
-- 💻 Code execution
-- 🗄️ Database queries
-- 🌐 API calls
-- 📁 File operations
+- Web search
+- Code execution
+- Database queries
+- API calls
+- File operations
 
 ### 3. Memory
 - **Short-term (Working)**: Current conversation and task context
@@ -244,14 +254,62 @@ Multiple specialized agents collaborate — one plans, one researches, one write
   },
 };
 
-// Related articles list (flat, for sidebar)
-const allArticlesMeta = [
+// Related articles when API list is empty
+const STATIC_RELATED_META = [
   { slug: "intro-to-prompt-engineering", title: "Introduction to Prompt Engineering", category: "fundamentals" },
   { slug: "zero-shot-vs-few-shot", title: "Zero-Shot vs Few-Shot Prompting", category: "techniques" },
   { slug: "chain-of-thought-prompting", title: "Chain-of-Thought Prompting", category: "techniques" },
   { slug: "rag-architecture-deep-dive", title: "RAG Architecture Deep Dive", category: "architecture" },
   { slug: "building-ai-agent-systems", title: "Building AI Agent Systems", category: "architecture" },
 ];
+
+type DisplayArticle = {
+  title: string;
+  category: string;
+  difficulty: string;
+  content: string;
+  tags: string[];
+  created_at: string;
+};
+
+function formatArticleDate(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+  return iso;
+}
+
+async function resolveDisplayArticle(slug: string): Promise<DisplayArticle | null> {
+  const api = await serverGetArticleBySlug(slug);
+  if (api?.title) {
+    const body =
+      api.content?.trim() ||
+      (api.excerpt ? `# ${api.title}\n\n${api.excerpt}` : "");
+    return {
+      title: api.title,
+      category: api.category,
+      difficulty: api.difficulty,
+      content: body,
+      tags: Array.isArray(api.tags) ? api.tags : [],
+      created_at: formatArticleDate(api.created_at),
+    };
+  }
+  const fb = FALLBACK_BY_SLUG[slug];
+  if (!fb) return null;
+  return { ...fb, tags: fb.tags };
+}
+
+async function buildRelated(slug: string, category: string) {
+  const list = await serverListArticles();
+  const fromApi = (list?.articles ?? [])
+    .map((a) => ({ slug: a.slug, title: a.title, category: a.category }))
+    .filter((a) => a.slug !== slug && a.category === category)
+    .slice(0, 3);
+  if (fromApi.length > 0) return fromApi;
+  return STATIC_RELATED_META.filter((a) => a.slug !== slug && a.category === category).slice(0, 3);
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -287,31 +345,50 @@ function renderContent(content: string) {
     const body = tableRows.slice(2); // skip separator row
     elements.push(
       <div key={`table-${key}`} style={{ overflowX: "auto", margin: "20px 0" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            fontSize: "0.875rem",
+          }}
+        >
           <thead>
             <tr>
               {headers.map((h, i) => (
-                <th key={i} style={{
-                  padding: "10px 16px",
-                  textAlign: "left",
-                  background: "rgba(124,58,237,0.12)",
-                  color: "#c4b5fd",
-                  fontWeight: 600,
-                  borderBottom: "1px solid rgba(124,58,237,0.2)",
-                  whiteSpace: "nowrap",
-                }}>{h.trim()}</th>
+                <th
+                  key={i}
+                  style={{
+                    padding: "10px 16px",
+                    textAlign: "left",
+                    background: "rgba(124,58,237,0.12)",
+                    color: "#c4b5fd",
+                    fontWeight: 600,
+                    borderBottom: "1px solid rgba(124,58,237,0.2)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {h.trim()}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {body.map((row, ri) => (
-              <tr key={ri} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <tr
+                key={ri}
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}
+              >
                 {row.map((cell, ci) => (
-                  <td key={ci} style={{
-                    padding: "10px 16px",
-                    color: "var(--text-secondary)",
-                    verticalAlign: "top",
-                  }}>{cell.trim()}</td>
+                  <td
+                    key={ci}
+                    style={{
+                      padding: "10px 16px",
+                      color: "var(--text-secondary)",
+                      verticalAlign: "top",
+                    }}
+                  >
+                    {cell.trim()}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -325,8 +402,14 @@ function renderContent(content: string) {
 
   const parseInline = (text: string) =>
     text
-      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:600">$1</strong>')
-      .replace(/`([^`]+)`/g, '<code style="background:rgba(124,58,237,0.15);padding:2px 8px;border-radius:4px;font-family:var(--font-geist-mono),monospace;font-size:0.82em;color:#c4b5fd">$1</code>');
+      .replace(
+        /\*\*(.*?)\*\*/g,
+        '<strong style="color:var(--text-primary);font-weight:600">$1</strong>'
+      )
+      .replace(
+        /`([^`]+)`/g,
+        '<code style="background:rgba(124,58,237,0.15);padding:2px 8px;border-radius:4px;font-family:var(--font-geist-mono),monospace;font-size:0.82em;color:#c4b5fd">$1</code>'
+      );
 
   for (const line of lines) {
     key++;
@@ -335,18 +418,21 @@ function renderContent(content: string) {
     if (line.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={key} style={{
-            background: "rgba(0,0,0,0.45)",
-            padding: "20px 24px",
-            borderRadius: "12px",
-            border: "1px solid rgba(124,58,237,0.15)",
-            overflowX: "auto",
-            fontFamily: "var(--font-geist-mono), monospace",
-            fontSize: "0.83rem",
-            lineHeight: 1.7,
-            margin: "20px 0",
-            color: "#e2e8f0",
-          }}>
+          <pre
+            key={key}
+            style={{
+              background: "rgba(0,0,0,0.45)",
+              padding: "20px 24px",
+              borderRadius: "12px",
+              border: "1px solid rgba(124,58,237,0.15)",
+              overflowX: "auto",
+              fontFamily: "var(--font-geist-mono), monospace",
+              fontSize: "0.83rem",
+              lineHeight: 1.7,
+              margin: "20px 0",
+              color: "#e2e8f0",
+            }}
+          >
             <code>{codeContent.replace(/\n$/, "")}</code>
           </pre>
         );
@@ -359,7 +445,10 @@ function renderContent(content: string) {
       continue;
     }
 
-    if (inCodeBlock) { codeContent += line + "\n"; continue; }
+    if (inCodeBlock) {
+      codeContent += line + "\n";
+      continue;
+    }
 
     // ── Tables ──
     if (line.startsWith("|")) {
@@ -380,64 +469,82 @@ function renderContent(content: string) {
     // ── Headings ──
     if (line.startsWith("## ")) {
       elements.push(
-        <h2 key={key} style={{
-          fontSize: "1.45rem",
-          fontWeight: 700,
-          marginTop: "44px",
-          marginBottom: "14px",
-          color: "var(--text-primary)",
-          letterSpacing: "-0.01em",
-          paddingBottom: "10px",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
-        }}>{line.slice(3)}</h2>
+        <h2
+          key={key}
+          style={{
+            fontSize: "1.45rem",
+            fontWeight: 700,
+            marginTop: "44px",
+            marginBottom: "14px",
+            color: "var(--text-primary)",
+            letterSpacing: "-0.01em",
+            paddingBottom: "10px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}
+        >
+          {line.slice(3)}
+        </h2>
       );
     } else if (line.startsWith("### ")) {
       elements.push(
-        <h3 key={key} style={{
-          fontSize: "1.1rem",
-          fontWeight: 600,
-          marginTop: "28px",
-          marginBottom: "10px",
-          color: "#c4b5fd",
-        }}>{line.slice(4)}</h3>
+        <h3
+          key={key}
+          style={{
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            marginTop: "28px",
+            marginBottom: "10px",
+            color: "#c4b5fd",
+          }}
+        >
+          {line.slice(4)}
+        </h3>
       );
     }
     // ── Lists ──
     else if (line.startsWith("- ")) {
       elements.push(
-        <li key={key} style={{
-          color: "var(--text-secondary)",
-          fontSize: "0.95rem",
-          marginLeft: "20px",
-          marginBottom: "6px",
-          lineHeight: 1.75,
-        }}
+        <li
+          key={key}
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: "0.95rem",
+            marginLeft: "20px",
+            marginBottom: "6px",
+            lineHeight: 1.75,
+          }}
           dangerouslySetInnerHTML={{ __html: parseInline(line.slice(2)) }}
         />
       );
     } else if (line.match(/^\d+\./)) {
       elements.push(
-        <li key={key} style={{
-          color: "var(--text-secondary)",
-          fontSize: "0.95rem",
-          marginLeft: "20px",
-          marginBottom: "6px",
-          lineHeight: 1.75,
-          listStyleType: "decimal",
-        }}
-          dangerouslySetInnerHTML={{ __html: parseInline(line.replace(/^\d+\.\s*/, "")) }}
+        <li
+          key={key}
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: "0.95rem",
+            marginLeft: "20px",
+            marginBottom: "6px",
+            lineHeight: 1.75,
+            listStyleType: "decimal",
+          }}
+          dangerouslySetInnerHTML={{
+            __html: parseInline(line.replace(/^\d+\.\s*/, "")),
+          }}
         />
       );
     }
     // ── Paragraphs ──
     else {
       elements.push(
-        <p key={key} style={{
-          color: "var(--text-secondary)",
-          fontSize: "0.97rem",
-          lineHeight: 1.85,
-          marginBottom: "14px",
-        }}
+        <p
+          key={key}
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: "0.97rem",
+            lineHeight: 1.85,
+            marginBottom: "14px",
+          }}
           dangerouslySetInnerHTML={{ __html: parseInline(line) }}
         />
       );
@@ -456,10 +563,10 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = articles[slug];
+  const article = await resolveDisplayArticle(slug);
   if (!article) return { title: "Article Not Found — Prompt Dairy" };
   return {
-    title: `${article.title} — Prompt Dairy`,
+    title: `${article.title} — Prompt Diary`,
     description: `Learn about ${article.title}. A ${article.difficulty}-level article on ${article.category}.`,
   };
 }
@@ -472,25 +579,64 @@ export default async function ArticleDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = articles[slug];
+  const article = await resolveDisplayArticle(slug);
 
   // ── 404 ──
   if (!article) {
     return (
-      <div style={{ maxWidth: "600px", margin: "0 auto", padding: "120px 24px", textAlign: "center" }}>
-        <span style={{ fontSize: "64px", display: "block", marginBottom: "24px" }}>📄</span>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px" }}>Article Not Found</h1>
+      <div
+        style={{
+          maxWidth: "600px",
+          margin: "0 auto",
+          padding: "120px 24px",
+          textAlign: "center",
+        }}
+      >
+        <span
+          style={{
+            width: "76px",
+            height: "76px",
+            borderRadius: "22px",
+            margin: "0 auto 24px",
+            background:
+              "linear-gradient(135deg, rgba(0,229,255,0.14), rgba(124,58,237,0.2))",
+            border: "1px solid rgba(0,229,255,0.18)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <FileText size={36} strokeWidth={1.7} color="#7dd3fc" />
+        </span>
+        <h1
+          style={{
+            fontSize: "1.5rem",
+            fontWeight: 700,
+            marginBottom: "12px",
+          }}
+        >
+          Article Not Found
+        </h1>
         <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>
           The article you&apos;re looking for doesn&apos;t exist.
         </p>
-        <Link href="/articles" className="btn-primary">← Back to Articles</Link>
+        <Link
+          href="/articles"
+          className="btn-primary"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <ArrowLeft size={16} />
+          Back to Articles
+        </Link>
       </div>
     );
   }
 
-  const related = allArticlesMeta
-    .filter((a) => a.slug !== slug && a.category === article.category)
-    .slice(0, 3);
+  const related = await buildRelated(slug, article.category);
 
   const readingTime = getReadingTime(article.content);
   const diffColor = getDifficultyColor(article.difficulty);
@@ -500,65 +646,135 @@ export default async function ArticleDetailPage({
       {/* Reading progress bar */}
       <ArticleReadingProgress />
 
-      <div style={{ maxWidth: "860px", margin: "0 auto", padding: "48px 24px 80px" }}>
-
+      <div
+        style={{
+          maxWidth: "860px",
+          margin: "0 auto",
+          padding: "48px 24px 80px",
+        }}
+      >
         {/* ── Breadcrumb ── */}
-        <nav style={{
-          marginBottom: "36px",
-          fontSize: "0.83rem",
-          color: "var(--text-muted)",
-          display: "flex",
-          gap: "8px",
-          alignItems: "center",
-        }}>
-          <Link href="/" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Home</Link>
+        <nav
+          style={{
+            marginBottom: "36px",
+            fontSize: "0.83rem",
+            color: "var(--text-muted)",
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <Link
+            href="/"
+            style={{
+              color: "var(--text-muted)",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <Home size={14} />
+            Home
+          </Link>
           <span>›</span>
-          <Link href="/articles" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Articles</Link>
+          <Link
+            href="/articles"
+            style={{ color: "var(--text-muted)", textDecoration: "none" }}
+          >
+            Articles
+          </Link>
           <span>›</span>
-          <span style={{ color: "var(--text-secondary)" }}>{article.title}</span>
+          <span style={{ color: "var(--text-secondary)" }}>
+            {article.title}
+          </span>
         </nav>
 
         {/* ── Header ── */}
         <header style={{ marginBottom: "40px" }}>
           {/* Badges */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "18px", flexWrap: "wrap", alignItems: "center" }}>
-            <span className={`badge badge-${article.difficulty}`}>{article.difficulty}</span>
-            <span style={{
-              fontSize: "0.75rem",
-              padding: "4px 12px",
-              borderRadius: "20px",
-              background: "rgba(255,255,255,0.05)",
-              color: "var(--text-muted)",
-              textTransform: "capitalize",
-            }}>{article.category}</span>
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginBottom: "18px",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <span className={`badge badge-${article.difficulty}`}>
+              {article.difficulty}
+            </span>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                padding: "4px 12px",
+                borderRadius: "20px",
+                background: "rgba(255,255,255,0.05)",
+                color: "var(--text-muted)",
+                textTransform: "capitalize",
+              }}
+            >
+              {article.category}
+            </span>
           </div>
 
           {/* Title */}
-          <h1 style={{
-            fontSize: "clamp(1.75rem, 4vw, 2.6rem)",
-            fontWeight: 800,
-            letterSpacing: "-0.025em",
-            lineHeight: 1.2,
-            marginBottom: "20px",
-          }}>
+          <h1
+            style={{
+              fontSize: "clamp(1.75rem, 4vw, 2.6rem)",
+              fontWeight: 800,
+              letterSpacing: "-0.025em",
+              lineHeight: 1.2,
+              marginBottom: "20px",
+            }}
+          >
             {article.title}
           </h1>
 
           {/* Meta bar */}
-          <div style={{
-            display: "flex",
-            gap: "20px",
-            alignItems: "center",
-            flexWrap: "wrap",
-            color: "var(--text-muted)",
-            fontSize: "0.82rem",
-            paddingBottom: "20px",
-            borderBottom: "1px solid var(--border-subtle)",
-          }}>
-            <span>📅 {article.created_at}</span>
-            <span>⏱️ {readingTime}</span>
-            <span style={{ textTransform: "capitalize" }}>
-              🏷️{" "}
+          <div
+            style={{
+              display: "flex",
+              gap: "20px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              color: "var(--text-muted)",
+              fontSize: "0.82rem",
+              paddingBottom: "20px",
+              borderBottom: "1px solid var(--border-subtle)",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <CalendarDays size={15} />
+              {article.created_at}
+            </span>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Clock3 size={15} />
+              {readingTime}
+            </span>
+            <span
+              style={{
+                textTransform: "capitalize",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <Tag size={15} />
               <span style={{ color: diffColor, fontWeight: 600 }}>
                 {article.difficulty}
               </span>
@@ -575,16 +791,26 @@ export default async function ArticleDetailPage({
         </article>
 
         {/* ── Tags ── */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "40px" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            flexWrap: "wrap",
+            marginBottom: "40px",
+          }}
+        >
           {article.tags.map((tag) => (
-            <span key={tag} style={{
-              fontSize: "0.75rem",
-              padding: "5px 14px",
-              borderRadius: "20px",
-              background: "rgba(124,58,237,0.1)",
-              color: "#a78bfa",
-              border: "1px solid rgba(124,58,237,0.18)",
-            }}>
+            <span
+              key={tag}
+              style={{
+                fontSize: "0.75rem",
+                padding: "5px 14px",
+                borderRadius: "20px",
+                background: "rgba(124,58,237,0.1)",
+                color: "#a78bfa",
+                border: "1px solid rgba(124,58,237,0.18)",
+              }}
+            >
               #{tag}
             </span>
           ))}
@@ -593,15 +819,16 @@ export default async function ArticleDetailPage({
         {/* ── Related Articles ── */}
         {related.length > 0 && (
           <section style={{ marginBottom: "40px" }}>
-            <h2 style={{
-              fontSize: "1.1rem",
-              fontWeight: 700,
-              marginBottom: "16px",
-              color: "var(--text-secondary)",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              fontSize: "0.78rem",
-            }}>
+            <h2
+              style={{
+                fontWeight: 700,
+                marginBottom: "16px",
+                color: "var(--text-secondary)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontSize: "0.78rem",
+              }}
+            >
               Related Articles
             </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -620,8 +847,18 @@ export default async function ArticleDetailPage({
                     gap: "12px",
                   }}
                 >
-                  <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>{rel.title}</span>
-                  <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>→</span>
+                  <span style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+                    {rel.title}
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text-muted)",
+                      flexShrink: 0,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <ArrowRight size={16} />
+                  </span>
                 </Link>
               ))}
             </div>
@@ -629,8 +866,18 @@ export default async function ArticleDetailPage({
         )}
 
         {/* ── Back Button ── */}
-        <Link href="/articles" className="btn-secondary" style={{ fontSize: "0.9rem" }}>
-          ← Back to Articles
+        <Link
+          href="/articles"
+          className="btn-secondary"
+          style={{
+            fontSize: "0.9rem",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <ArrowLeft size={16} />
+          Back to Articles
         </Link>
       </div>
     </>

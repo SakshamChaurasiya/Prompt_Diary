@@ -276,7 +276,7 @@ export default function VideoShowcase() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#28ca42" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
-              <span style={{ color: "rgba(255,255,255,0.3)" }}>prompt-dairy.ai</span>
+              <span style={{ color: "rgba(255,255,255,0.3)" }}>prompt-diary.ai</span>
               <span style={{ color: "rgba(255,255,255,0.15)" }}>/</span>
               <span style={{ color: "rgba(0,229,255,0.6)" }}>demo</span>
             </div>
@@ -394,9 +394,9 @@ export default function VideoShowcase() {
               }}
             >
               {[
-                { icon: "⚡", text: "Real-time AI Feedback", delay: 0 },
-                { icon: "🧠", text: "Neural Processing", delay: 0.08 },
-                { icon: "🔮", text: "Adaptive Learning", delay: 0.16 },
+                { icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>, text: "Real-time AI Feedback", delay: 0 },
+                { icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>, text: "Neural Processing", delay: 0.08 },
+                { icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 17l4-4 4 4 4-8 4 4"/><path d="M21 21H3"/></svg>, text: "Adaptive Learning", delay: 0.16 },
               ].map((item, i) => (
                 <div
                   key={i}
@@ -419,7 +419,7 @@ export default function VideoShowcase() {
                     pointerEvents: "none",
                   }}
                 >
-                  <span style={{ fontSize: "14px" }}>{item.icon}</span>
+                  <span style={{ display: "flex", alignItems: "center" }}>{item.icon}</span>
                   {item.text}
                 </div>
               ))}
@@ -488,7 +488,11 @@ export default function VideoShowcase() {
                   color: "#00e5ff",
                 }}
               >
-                {isPlaying ? "⏸" : "▶️"}
+                {isPlaying ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#00e5ff" stroke="none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#00e5ff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                )}
               </div>
             </div>
           </div>
@@ -529,7 +533,11 @@ export default function VideoShowcase() {
                 e.currentTarget.style.transform = "scale(1)";
               }}
             >
-              {isPlaying ? "⏸" : "▶"}
+              {isPlaying ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              )}
             </button>
 
             {/* Current time */}
@@ -646,7 +654,11 @@ export default function VideoShowcase() {
                 e.currentTarget.style.transform = "scale(1)";
               }}
             >
-              {isMuted ? "🔇" : "🔊"}
+              {isMuted ? (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              )}
             </button>
 
             {/* Quality badge */}
@@ -698,28 +710,28 @@ export default function VideoShowcase() {
       >
         {[
           {
-            icon: "🎬",
+            icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>,
             title: "Interactive Demos",
             desc: "Watch real-time AI interactions",
             color: "#00e5ff",
             glow: "rgba(0,229,255,0.15)",
           },
           {
-            icon: "🚀",
+            icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>,
             title: "Live Playground",
             desc: "Test prompts as you learn",
             color: "#b026ff",
             glow: "rgba(176,38,255,0.15)",
           },
           {
-            icon: "📊",
+            icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
             title: "Visual Analytics",
             desc: "Track your learning progress",
             color: "#ff4fd8",
             glow: "rgba(255,79,216,0.15)",
           },
           {
-            icon: "🔥",
+            icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>,
             title: "Challenge Mode",
             desc: "Compete in timed prompt battles",
             color: "#f59e0b",
@@ -749,12 +761,12 @@ export default function VideoShowcase() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "20px",
                 flexShrink: 0,
+                color: item.color,
                 boxShadow: `0 0 20px ${item.glow}`,
               }}
             >
-              {item.icon}
+              <span style={{ display: "flex" }}>{item.icon}</span>
             </div>
             <div>
               <div

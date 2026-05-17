@@ -26,6 +26,8 @@ app.add_middleware(
         settings.FRONTEND_URL,
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -60,5 +62,8 @@ async def app_info():
             "challenges": "/api/v1/challenges",
             "roadmaps": "/api/v1/roadmaps",
             "auth": "/api/v1/auth",
+            "user_progress": "/api/v1/user-progress",
+            "search": "/api/v1/search",
+            "playground": "/api/v1/playground",
         },
     }
